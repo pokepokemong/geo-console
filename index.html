@@ -205,7 +205,7 @@
         <div class="stat4">
           <div class="kpi"><div class="l">AI 노출률</div><div class="v num">27<small>%</small></div><div class="s m num">30번 중 8번 · 목표 50%</div></div>
           <div class="kpi"><div class="l">추천 점유율</div><div class="v num" id="sovPct">—</div><div class="s r" id="sovSub">—</div></div>
-          <div class="kpi"><div class="l">취약 프롬프트</div><div class="v num">5</div><div class="s a">우선 개선 3개</div></div>
+          <div class="kpi"><div class="l">취약 프롬프트</div><div class="v num">6</div><div class="s a">세 곳 모두 미노출</div></div>
           <div class="kpi"><div class="l">구글 리뷰</div><div class="v num">30<small>+</small></div><div class="s g">목표 달성 · 측정 당시 6개</div></div>
         </div>
 
@@ -246,10 +246,11 @@
           </div>
         </div>
 
-        <div class="card">
+        <div class="card" id="qcard">
           <div class="ch">
             <div><h3>질문별 노출</h3><p>초록 = 언급됨. 질문 아래는 우리 대신 나온 가게입니다.</p></div>
             <span class="sp"></span>
+            <span class="chip-live" id="fstate" style="display:none; background:var(--amber-bg); color:var(--amber)"></span>
             <div class="fchips" id="filters">
               <button class="fchip on" type="button" data-k="all">전체</button>
               <button class="fchip" type="button" data-k="이름">이름</button>
@@ -515,7 +516,8 @@ const HINT = { "브랜드":"우리 이름을 대는 질문", "우리 특성":"�
 const rowsEl = document.getElementById("rows");
 function draw(kind, missOnly) {
   rowsEl.innerHTML = "";
-  GEO.questions.filter(q => (kind === "all" || q.kind === kind) && !(missOnly && q.r.includes(1))).forEach(q => {
+  const list = GEO.questions.filter(q => (kind === "all" || q.kind === kind) && !(missOnly && q.r.includes(1)));
+  list.forEach(q => {
     const cells = q.r.map((v, i) =>
       '<td class="c"><span class="mark ' + (v ? "y" : "n") + '" title="' + GEO.engines[i] + '">' + (v ? "노출" : "—") + "</span></td>").join("");
     const meta = q.warn ? '<div class="pm warn">' + q.warn + "</div>" : q.meta ? '<div class="pm">' + q.meta + "</div>" : "";
@@ -526,17 +528,29 @@ function draw(kind, missOnly) {
       '<tr><td style="min-width:260px"><div class="pt">' + q.q + "</div>" + meta + rv + "</td>" +
       '<td><span class="mini">' + q.intent + "</span></td>" + cells + "</tr>";
   });
-  if (!rowsEl.innerHTML) rowsEl.innerHTML = '<tr><td colspan="5" style="color:var(--faint)">해당하는 질문이 없습니다.</td></tr>';
+  if (!list.length) rowsEl.innerHTML = '<tr><td colspan="5" style="color:var(--faint)">해당하는 질문이 없습니다.</td></tr>';
+  return list.length;
 }
 draw("all", false);
 let curK = "all", curM = false;
 document.querySelectorAll("#filters .fchip").forEach(c => c.addEventListener("click", () => {
   document.querySelectorAll("#filters .fchip").forEach(x => x.classList.remove("on"));
-  c.classList.add("on"); curK = c.dataset.k; draw(curK, curM);
+  c.classList.add("on"); curK = c.dataset.k;
+  const n = draw(curK, curM);
+  if (curM) fstate.textContent = "취약 프롬프트만 표시 중 · " + n + "개";
 }));
-document.getElementById("btnMiss").addEventListener("click", () => { curM = true; draw(curK, true); location.hash = "#pa"; });
+const fstate = document.getElementById("fstate");
+const smooth = matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+document.getElementById("btnMiss").addEventListener("click", () => {
+  curM = true;
+  const n = draw(curK, true);
+  fstate.style.display = "";
+  fstate.textContent = "취약 프롬프트만 표시 중 · " + n + "개";
+  document.getElementById("qcard").scrollIntoView({ behavior: smooth, block: "start" });
+});
 document.getElementById("btnAll").addEventListener("click", () => {
   curM = false; curK = "all";
+  fstate.style.display = "none";
   document.querySelectorAll("#filters .fchip").forEach(x => x.classList.toggle("on", x.dataset.k === "all"));
   draw("all", false);
 });
